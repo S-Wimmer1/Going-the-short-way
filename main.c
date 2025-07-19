@@ -144,7 +144,28 @@ AZEL* slerp_path(double start_az, double start_el, double end_az, double end_el,
 
 
 
+// Time calculation for path
+double movement_time(AZEL start, AZEL end) {
+    double delta_az = shortest_angular_distance(start.azimuth, end.azimuth);
+    double delta_el = fabs(end.elevation - start.elevation);
 
+    double time_az = delta_az / AZ_SPEED;
+    double time_el = delta_el / EL_SPEED;
+
+    return (time_az > time_el) ? time_az : time_el; // return dominating movement time
+}
+
+
+
+
+// total time for slerp
+double slerp_path_time(AZEL* path, int length) {
+    double total_time = 0.0;
+    for (int i = 1; i < length; ++i) {
+        total_time += movement_time(path[i - 1], path[i]);
+    }
+    return total_time;
+}
 
 
 
