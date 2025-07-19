@@ -158,7 +158,7 @@ double movement_time(AZEL start, AZEL end) {
 
 
 
-// total time for slerp
+// Total time for slerp
 double slerp_path_time(AZEL* path, int length) {
     double total_time = 0.0;
     for (int i = 1; i < length; ++i) {
@@ -169,6 +169,99 @@ double slerp_path_time(AZEL* path, int length) {
 
 
 
+
+// Struct for different paths
+typedef struct {
+    char label[8];
+    AZEL* path;
+    int length;
+} LabeledPath;
+
+
+
+
+// Individual axis movement, AZ first
+AZEL* az_el_path(AZEL start, AZEL end, int steps, int* out_len) {
+    int len1 = 0, len2 = 0;
+
+    AZEL* az_path = slerp_path(start.azimuth, start.elevation, end.azimuth, start.elevation, steps, &len1);
+    AZEL* el_path = slerp_path(end.azimuth, start.elevation, end.azimuth, end.elevation, steps, &len2);
+
+    if (!az_path || !el_path) return NULL;
+
+    AZEL* full_path = malloc(sizeof(AZEL) * steps);
+    if (!full_path) return NULL;
+
+    for (int i = 0; i < len1; ++i) full_path[i] = az_path[i];
+    for (int i = 0; i < len2; ++i) full_path[len1 + i] = el_path[i];
+
+    free(az_path);
+    free(el_path);
+
+    *out_len = len1 + len2;
+    return full_path;
+}
+
+
+
+
+// EL first
+AZEL* el_az_path(AZEL start, AZEL end, int steps, int* out_len) {
+    int len1 = 0, len2 = 0;
+
+    AZEL* el_path = slerp_path(start.azimuth, start.elevation, start.azimuth, end.elevation, steps, &len1);
+    AZEL* az_path = slerp_path(start.azimuth, end.elevation, end.azimuth, end.elevation, steps, &len2);
+
+    if (!el_path || !az_path) return NULL;
+
+    AZEL* full_path = malloc(sizeof(AZEL) * steps);
+    if (!full_path) return NULL;
+
+    for (int i = 0; i < len1; ++i) full_path[i] = el_path[i];
+    for (int i = 0; i < len2; ++i) full_path[len1 + i] = az_path[i];
+    
+    free(el_path);
+    free(az_path);
+
+    *out_len = len1 + len2;
+    return full_path;
+}
+
+
+
+
+// Both axis move simultaneously -> faster than individually
+AZEL* simultaneous_az_el_path(AZEL start, AZEL end, int steps, int* out_len) {
+    double az1 = start.azimuth;
+    double el1 = start.elevation;
+    double az2 = end.azimuth;
+    double el2 = end.elevation;
+
+    double delta_az = fmod((az2 - az1 + 540.0), 360.0) - 180.0;
+    double az_end_adjusted = az1 + delta_az;
+
+    AZEL* path = malloc(sizeof(AZEL) * steps);
+    if (!path) return NULL;
+
+    for (int i = 0; i < steps; ++i) {
+        double t = (double)i / (steps - 1);
+        double az = az1 + (az_end_adjusted - az1) * t;
+        double el = el1 + (el2 - el1) * t;
+        path[i].azimuth = az;
+        path[i].elevation = el;
+    }
+
+    *out_len = steps;
+    return path;
+}
+
+
+
+
+// Testing
+void test_func() {
+    printf("\n");
+}
 
 
 
