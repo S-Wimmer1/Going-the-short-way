@@ -5,6 +5,8 @@ import pandas as pd # Dataframe
 import seaborn as sns # Boxplot
 
 
+
+
 # Constants (telescope constraint and axis-speeds)
 AZIMUTH_MIN     = -180 # "under"-rotation
 AZIMUTH_MAX     = 540 # with over-rotation
@@ -12,6 +14,8 @@ ELEVATION_MIN   = 15 # balcony ground collision at <=14°
 ELEVATION_MAX   = 165 # flip-over
 AZ_SPEED        = 1.6 # degrees per second, practically tested
 EL_SPEED        = 1.3
+
+
 
 
 # Waypoints for simulation
@@ -29,6 +33,8 @@ waypoints = [
 ]
 
 
+
+
 # Accurate movement with great circle works with cartesian 3D vectors
 def azel_to_cartesian(az_deg: float, el_deg: float) -> np.ndarray:
     az = np.radians(az_deg)
@@ -40,6 +46,8 @@ def azel_to_cartesian(az_deg: float, el_deg: float) -> np.ndarray:
     return np.array([x, y, z])
 
 
+
+
 # Reverse coordinate transformation
 def cartesian_to_azel(vec: np.ndarray) -> Tuple[float, float]:
     x, y, z = vec
@@ -47,6 +55,8 @@ def cartesian_to_azel(vec: np.ndarray) -> Tuple[float, float]:
     az = np.degrees(np.arctan2(y, x)) % 360 # full-circle azimuth
     el = np.degrees(np.arctan2(z, hyp))
     return az, el
+
+
 
 
 # SLERP: Spherical Linear Interpolation
@@ -79,6 +89,8 @@ def slerp_path(start_az: float, start_el: float, end_az: float, end_el: float, s
     return path
 
 
+
+
 # For polar projection plot
 def azel_to_polar(az_deg: float, el_deg: float) -> Tuple[float, float]:
     if el_deg > 90:
@@ -86,6 +98,8 @@ def azel_to_polar(az_deg: float, el_deg: float) -> Tuple[float, float]:
     theta = np.radians(az_deg % 360)
     radius = 90 - el_deg # center = el_90
     return theta, radius
+
+
 
 
 # Time calculation for a path (NOTE: no curved paths!!!)
@@ -104,12 +118,16 @@ def movement_time(start: Tuple[float, float], end: Tuple[float, float]) -> float
     return max(time_az, time_el) # Simultaneous AZ/EL movement
 
 
+
+
 # Uses the SLERPs individual linear paths to calculate total time (approx curved)
 def slerp_path_time(path: List[Tuple[float, float]]) -> float:
     total_time = 0.0
     for i in range(1, len(path)):
         total_time += movement_time(path[i-1], path[i])
     return total_time
+
+
 
 
 # Individual axis movement (usually slower)
@@ -129,6 +147,8 @@ def axis_aligned_paths(start: Tuple[float, float], end: Tuple[float, float]) -> 
     return paths
 
 
+
+
 def simultaneous_az_el_path(start: Tuple[float, float], end: Tuple[float, float], steps: int = 500) -> List[Tuple[float, float]]:
     az1, el1 = start
     az2, el2 = end
@@ -141,6 +161,8 @@ def simultaneous_az_el_path(start: Tuple[float, float], end: Tuple[float, float]
         for t in np.linspace(0, 1, steps)
     ]
     return path
+
+
 
 
 # Collect all paths, compute SLERP for every pair of waypoints
@@ -172,6 +194,7 @@ for i in range(len(waypoints) -1):
 
 
 
+
 # Convert to DataFrame for displaying results
 df = pd.DataFrame(all_paths)
 df["From"] = df["From"].apply(lambda t: (round(t[0], 1), round(t[1], 1)))
@@ -191,6 +214,8 @@ print(f"\nWin counts by {win_counts}")
 # Average Time per path type
 avg_times = df.groupby("Path Type")["Time (s)"].mean().sort_values()
 print(f"\nAverage Times:\n{avg_times}")
+
+
 
 
 # Plotting ------------------------------------------------------------
@@ -222,6 +247,8 @@ for ax, path_type in zip(axes, path_types):
 
 plt.tight_layout()
 plt.show()
+
+
 
 
 # Polar subplots
@@ -258,6 +285,8 @@ plt.tight_layout()
 plt.show()
 
 
+
+
 # Seaborn statistics
 sns.boxplot(data=df, x="Path Type", y="Time (s)", color="orangered")
 plt.title("Movement Time Distribution by Path Type")
@@ -265,5 +294,7 @@ plt.show()
 
 '''
 TODO
--?
+-more statistic
+-get c implementation to work
+-
 '''
