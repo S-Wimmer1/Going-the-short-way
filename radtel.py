@@ -103,7 +103,7 @@ def azel_to_polar(az_deg: float, el_deg: float) -> Tuple[float, float]:
 
 
 # Time calculation for a path (NOTE: no curved paths!!!)
-def movement_time(start: Tuple[float, float], end: Tuple[float, float]) -> float:
+def movement_time(start: Tuple[float, float], end: Tuple[float, float], sequential: bool = False) -> float:
     # Extract coordinates
     az_start, el_start = start
     az_end, el_end = end
@@ -115,16 +115,19 @@ def movement_time(start: Tuple[float, float], end: Tuple[float, float]) -> float
     time_az = delta_az / AZ_SPEED
     time_el = delta_el / EL_SPEED
 
-    return max(time_az, time_el) # Simultaneous AZ/EL movement
+    if sequential:
+        return time_az + time_el # Separate movement
+    else:
+        return max(time_az, time_el) # Simultaneous AZ/EL movement
 
 
 
 
 # Uses the SLERPs individual linear paths to calculate total time (approx curved)
-def slerp_path_time(path: List[Tuple[float, float]]) -> float:
+def slerp_path_time(path: List[Tuple[float, float]], sequential: bool = False) -> float:
     total_time = 0.0
     for i in range(1, len(path)):
-        total_time += movement_time(path[i-1], path[i])
+        total_time += movement_time(path[i-1], path[i], sequential)
     return total_time
 
 
@@ -136,12 +139,12 @@ def axis_aligned_paths(start: Tuple[float, float], end: Tuple[float, float]) -> 
     az_s, el_s = start
     az_e, el_e = end
 
-    az_path1 = slerp_path(az_s, el_s, az_e, el_s, steps=250)
-    el_path1 = slerp_path(az_e, el_s, az_e, el_e, steps=250)
+    az_path1 = slerp_path(az_s, el_s, az_e, el_s, steps=100)
+    el_path1 = slerp_path(az_e, el_s, az_e, el_e, steps=100)
     paths.append(("AZ->EL", az_path1 + el_path1))
 
-    az_path2 = slerp_path(az_s, el_s, az_s, el_e, steps=250)
-    el_path2 = slerp_path(az_s, el_e, az_e, el_e, steps=250)
+    az_path2 = slerp_path(az_s, el_s, az_s, el_e, steps=100)
+    el_path2 = slerp_path(az_s, el_e, az_e, el_e, steps=100)
     paths.append(("EL->AZ", az_path2 + el_path2))
 
     return paths
@@ -175,21 +178,33 @@ for i in range(len(waypoints) -1):
     path_slerp = slerp_path(*start, *end, steps=500)
     time_slerp = slerp_path_time(path_slerp)
     all_paths.append({
-        "From": start, "To": end, "Path Type": "SLERP", "Time (s)": round(time_slerp, 2), "Path": path_slerp
+        "From": start,
+        "To": end,
+        "Path Type": "SLERP",
+        "Time (s)": round(time_slerp, 2),
+        "Path": path_slerp
         })
 
     # Axis-aligned paths and times
     for name, path in axis_aligned_paths(start, end):
-        time_axis = slerp_path_time(path)
+        time_axis = slerp_path_time(path, sequential=True)
         all_paths.append({
-            "From": start, "To": end, "Path Type": name, "Time (s)": round(time_axis, 2), "Path": path
+            "From": start,
+            "To": end,
+            "Path Type": name,
+            "Time (s)": round(time_axis, 2),
+            "Path": path
         })
 
     # Simultaneous AZ+EL path
     path_simult = simultaneous_az_el_path(start, end, steps=500)
     time_simult = slerp_path_time(path_simult)
     all_paths.append({
-        "From": start, "To": end, "Path Type": "AZ+EL Simult", "Time (s)": round(time_simult, 2), "Path": path_simult
+        "From": start,
+        "To": end,
+        "Path Type": "AZ+EL Simult",
+        "Time (s)": round(time_simult, 2),
+        "Path": path_simult
     })
 
 
@@ -298,3 +313,133 @@ TODO
 -get c implementation to work
 -
 '''
+
+
+
+# Create n many waypoints for simmulation run
+def random_waypoints(n: int = 10) -> List[Tuple[float, float]]:
+    az = np.random.uniform(0, 360, n)
+    el = np.random.uniform(ELEVATION_MIN, ELEVATION_MAX, n)
+
+    return list(zip(az, el))
+
+
+
+
+def benchmark_segment(wps: List[Tuple[float, float]]):
+    method_times = {
+        "SLERP": [],
+        "AZ->EL": [],
+        "EL->AZ": [],
+        "AZ+EL Simult": []
+        }
+
+    # Waypoint pairs for moving
+    for i in range(len(wps) - 1):
+        s, e = wps[i], wps[i + 1]
+
+        method_times["SLERP"].append(slerp_path_time(slerp_path(*s, *e, steps=100)))
+
+        axel_paths = axis_aligned_paths(s, e)
+        method_times["AZ->EL"].append(slerp_path_time(axel_paths[0][1], sequential=True))
+        method_times["EL->AZ"].append(slerp_path_time(axel_paths[1][1], sequential=True))
+
+        sim_path = simultaneous_az_el_path(s, e, steps=100)
+        method_times["AZ+EL Simult"].append(slerp_path_time(sim_path))
+
+    return method_times
+
+
+
+
+# Plotting benchmarks, y=time, x=all pairs of coordinates
+def plot_time_per_segment(method_times: dict, n: int=10):
+    fig, axs = plt.subplots(2, 2, figsize=(14, 10))
+    axs = axs.flatten()
+
+    for i, (method, times) in enumerate(method_times.items()):
+        ax = axs[i]
+        x = np.arange(len(times))
+        y = np.array(times)
+
+        ax.plot(x, y, label="Time per Segment", alpha=0.7, color="gold")
+        ax.axhline(np.mean(y), color="crimson", linestyle="--", label=f"Avg = {np.mean(y):.3f}s")
+
+        ax.set_title(method)
+        ax.set_ylabel("Time (s)")
+        ax.set_xlabel("Segment Index")
+        ax.grid(True)
+        ax.legend()
+
+    plt.suptitle(f"Time per Segment: across {n}-Waypoint Run")
+    plt.tight_layout()
+    plt.show()
+
+N = 1000 # ADJUST HERE
+wps = random_waypoints(N)
+segment_times = benchmark_segment(wps)
+plot_time_per_segment(segment_times, N)
+
+
+
+
+''' idfk what i did there
+# Move teelscope for method wps-many times
+def n_wps(method_fn_dict, wps):
+    results = {}
+
+    for method, path_builder in method_fn_dict.items():
+        full_path = []
+        cumulative_time = []
+        current_time = 0.0
+
+        for i in range(len(wps) - 1):
+            segment = path_builder(wps[i], wps[i + 1])
+            for j, point in enumerate(segment):
+                if j == 0 and len(full_path) > 0:
+                    continue # avoid duplicates
+                full_path.append(point)
+
+                if len(full_path) == 1:
+                    cumulative_time.append(0.0)
+                else:
+                    dt = movement_time(full_path[-2], full_path[-1])
+                    current_time += dt
+                    cumulative_time.append(current_time)
+        
+        az, el = zip(*full_path)
+        results[method] = {"time": cumulative_time, "az": az, "el": el}
+
+    return results
+
+
+
+
+# execution of many waypoints (might take a while)
+wps = random_waypoints(1000)
+
+method_fn_dict = {
+    "SLERP": lambda s, e: slerp_path(*s, *e, steps=100),
+    "AZ->EL": lambda s, e: axis_aligned_paths(s, e)[0][1],
+    "EL->AZ": lambda s, e: axis_aligned_paths(s, e)[1][1],
+    "AZ+EL Simult": lambda s, e: simultaneous_az_el_path(s, e, steps=100)
+}
+
+exec_data = n_wps(method_fn_dict, wps)
+
+fig, axs = plt.subplots(2, 2, figsize=(14, 10))
+axs = axs.flatten()
+
+for i, (method, data) in enumerate(exec_data.items()):
+    ax = axs[i]
+    ax.plot(data["time"], data["az"], label="Azimuth", alpha=0.7)
+    ax.plot(data["time"], data["el"], label="Elevation", alpha=0.7)
+    ax.set_title(f"{method}")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Degrees (°)")
+    ax.grid(True)
+    ax.legend()
+
+plt.suptitle("Movement by Path Method (n-wps)")
+plt.tight_layout()
+plt.show'''
