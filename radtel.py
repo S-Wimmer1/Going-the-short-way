@@ -165,7 +165,15 @@ def simultaneous_az_el_path(start: Tuple[float, float], end: Tuple[float, float]
     ]
     return path
 
+def axis_aligned_time(start: Tuple[float, float], end: Tuple[float, float]) -> Tuple[float, float]:
+    az_to_el = (
+        movement_time(start, (end[0], start[1]), sequential=False) + movement_time((end[0], start[1]), end, sequential=False)
+        )
 
+    el_to_az = (
+        movement_time(start, (start[0], end[1]),sequential=False) + movement_time((start[0], end[1]), end, sequential=False)
+    )
+    return az_to_el, el_to_az
 
 
 # Collect all paths, compute SLERP for every pair of waypoints
@@ -340,9 +348,9 @@ def benchmark_segment(wps: List[Tuple[float, float]]):
 
         method_times["SLERP"].append(slerp_path_time(slerp_path(*s, *e, steps=100)))
 
-        axel_paths = axis_aligned_paths(s, e)
-        method_times["AZ->EL"].append(slerp_path_time(axel_paths[0][1], sequential=True))
-        method_times["EL->AZ"].append(slerp_path_time(axel_paths[1][1], sequential=True))
+        azel_time, elaz_time = axis_aligned_time(s, e)
+        method_times["AZ->EL"].append(azel_time)
+        method_times["EL->AZ"].append(elaz_time)
 
         sim_path = simultaneous_az_el_path(s, e, steps=100)
         method_times["AZ+EL Simult"].append(slerp_path_time(sim_path))
@@ -379,6 +387,27 @@ N = 1000 # ADJUST HERE
 wps = random_waypoints(N)
 segment_times = benchmark_segment(wps)
 plot_time_per_segment(segment_times, N)
+
+
+
+
+# Testing bullshit
+def average_delta(wps):
+    total_az = 0
+    total_el = 0
+    for i in range(len(wps) - 1):
+        az1, el1 = wps[i]
+        az2, el2 = wps[i + 1]
+        delta_az = min(abs(az2 - az1), 360 - abs(az2 - az1))
+        delta_el = abs(el2 - el1)
+        total_az += delta_az
+        total_el += delta_el
+    return total_az / (len(wps) - 1), total_el / (len(wps) - 1)
+
+print("fixed  avg deltas", average_delta(waypoints))
+print("random avg deltas", average_delta(wps))
+
+
 
 
 
