@@ -1,0 +1,80 @@
+\subsection{Koordinatensysteme in der Astronomie}
+
+In der Astronomie gibt es verschiedene Koordinatensysteme zur Beschreibung von Positionen am Himmel. Jedes hat seine Vor- und Nachteile, generell weit verbreitet sind das äquatoriale und das horizontale Koordinatensystem.
+Das äquatoriale Koordinatensystem benutzt Rektaszension und Deklination um Positionen zu bestimmen und ist an der Erdachse orientiert und somit global gültig. Ein Vorteil ist, dass nur in der Achse der Rektaszension mitgeführt werden muss.
+Im Gegensatz dazu ist das horizontale System standortabhängig und beschreibt Positionen relativ zum lokalen Horizont, was sehr intuitiv ist. Die Steuerung des NRTs erfolgt mechanisch über die beiden Achsen des horizontalen Systems - Azimut (AZ) und Elevation (El) - in der Software für den Client ist jedoch auch eine Umrechnung in das äquatoriale und auch das galaktische Koordinatensystem ersichtlich. 
+Ein Nachteil ergibt sich durch die Verwendung des AZEL-Systems bei Beobachtungen nahe des Zenits, wo kleine Positionsänderungen zu langen Bewegungen in AZ führen.
+
+\subsection{Mathematische Darstellung der Teleskopposition}
+
+Um die Distanzen / Pfade zwischen Start- und Zielkoordinaten zu berechnen, werden die Punkte hierfür auf der Einheitssphäre dargestellt. Dies dient zur späteren Verwendung für die Interpolation auf der Kugeloberfläche.
+Die Umrechnung von horizontalen zu kartesischen Koordinaten erfolgt durch die Verwendung trigonometrischer Funktionen (Kugelkoordinaten). Alle Umrechnungen erfolgen in Radianten / Bogenmaß, d.h. die AZ/EL-Koordinaten werden zunächst von Grad in Radiant konvertiert und dann für folgende Formeln verwendet.
+
+\begin{equation}
+    x = cos(EL) \cdot cos(AZ)
+    \label{cartesian_x}
+\end{equation}
+
+\begin{equation}
+    y = cos(EL) \cdot sin(AZ)
+    \label{cartesian_y}
+\end{equation}
+
+\begin{equation}
+    z = sin(EL)
+    \label{cartesian_z}
+\end{equation}
+\\
+Um die berechneten Zwischenpunkte für die Steuerung nutzbar zu machen, werden die kartesischen Koordinaten wieder in AZ/EL-Koordinaten mit folgenden Formeln rücktransformiert.
+
+\begin{equation}
+    hyp = \sqrt{x^2 + y^2}
+    \label{hypotenuse}
+\end{equation}
+
+\begin{equation}
+    AZ = arctan2(y,~x)~ \bmod ~360
+    \label{arctan2_az}
+\end{equation}
+
+\begin{equation}
+    EL = arctan2(z,~hyp)
+    \label{arctan2_el}
+\end{equation}
+\\
+Die Koordinaten sind grundsätzlich in Grad angegeben, die aufgezählten Formeln benötigen jedoch Radiant als Einheit der Winkel.
+Für die Konvertierung von Grad (°) in Radiant (rad) wird folgende Umrechnung benutzt.
+
+\begin{equation}
+    radians = degrees ~\cdot~ \frac{\pi}{180}
+\end{equation}
+
+
+\subsection{Sphärische Geometrie}
+
+\subsubsection{Großkreis- vs. Azimuthalpfad}
+\subsubsection{SLERP-Interpolation \textendash~Vorteile und Grenzen}
+
+kürzeste verbindung zwischen zwei punkten auf einer kugel - großkreis
+optisch kürzester weg ? nicht immer der geometrisch kürzeste
+slerp beschreibung
+interpolation auf einheitskugel
+warum sinnvoll (smooth + realistisch)
+
+\subsection{Laufzeitberechnung}
+
+\subsubsection{Einfluss von Azimut- und Elevationsgeschwindigkeit}
+\subsubsection{Engstellen \textendash Limitierender Freiheitsgrad}
+
+azel geschwindigkeiten
+t max
+langer achsenweg dominiert
+
+\subsection{Mechanische Freiheitsgrade des NRT}
+
+\subsubsection{Restriktionen durch Softwaregrenzen}
+\subsubsection{Nutzung des vollen Bewegungsbereichs \textendash~Chancen \& Risiken}
+
+auflistung + erklärung warum problematisch / vorteilhaft
+darstellung
+
