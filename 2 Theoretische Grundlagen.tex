@@ -7,7 +7,7 @@ Ein Nachteil ergibt sich durch die Verwendung des AZEL-Systems bei Beobachtungen
 
 \subsection{Mathematische Darstellung der Teleskopposition}
 
-Um die Distanzen / Pfade zwischen Start- und Zielkoordinaten zu berechnen, werden die Punkte hierfür auf der Einheitssphäre dargestellt. Dies dient zur späteren Verwendung für die Interpolation auf der Kugeloberfläche.
+Um die Distanzen / Pfade zwischen Start- und Zielkoordinaten zu berechnen, werden die Punkte hierfür auf der Oberfläche der Einheitssphäre dargestellt. Dies dient zur späteren Verwendung für die Interpolation von Strecken auf der Kugeloberfläche.
 Die Umrechnung von horizontalen zu kartesischen Koordinaten erfolgt durch die Verwendung trigonometrischer Funktionen (Kugelkoordinaten). Alle Umrechnungen erfolgen in Radianten / Bogenmaß, d.h. die AZ/EL-Koordinaten werden zunächst von Grad in Radiant konvertiert und dann für folgende Formeln verwendet.
 
 \begin{equation}
@@ -53,6 +53,9 @@ Für die Konvertierung von Grad (°) in Radiant (rad) wird folgende Umrechnung b
 \subsection{Sphärische Geometrie}
 
 \subsubsection{Großkreis- vs. Azimuthalpfad}
+
+Zur Berechnung der kürzesten Strecke zwischen Start- und Zielpunkt wird zunächst die Verbindung entlang eines Großkreises betrachtet. Ein Großkreis ist ein größtmöglicher Kreis auf der Kugeloberfläche. Dadurch teilt er die Kugel in zwei gleich große Hälften und der Mittelpunkt stimmt mit dem Mittelpunkt der Kugel überein. Ein Beispiel dafür sind Längenkreise auf der Erde, währenddessen Breitenkreise (bis auf den Äquator) keine Großkreise sind. Großkreise sind in der sphärischen Geometrie das äquivalent von Geraden in der Ebene und damit die kürzeste Verbindung zwischen zwei Punkten.
+
 \subsubsection{SLERP-Interpolation \textendash~Vorteile und Grenzen}
 
 kürzeste verbindung zwischen zwei punkten auf einer kugel - großkreis
@@ -60,6 +63,11 @@ optisch kürzester weg ? nicht immer der geometrisch kürzeste
 slerp beschreibung
 interpolation auf einheitskugel
 warum sinnvoll (smooth + realistisch)
+
+
+
+
+
 
 \subsection{Laufzeitberechnung}
 
