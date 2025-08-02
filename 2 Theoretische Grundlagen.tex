@@ -55,9 +55,9 @@ Für die Konvertierung von Grad (°) in Radiant (rad) wird folgende Umrechnung b
 
 \subsubsection{Großkreis- vs. Azimutalpfad}
 
-Zur Berechnung der kürzesten Strecke zwischen Start- und Zielpunkt wird zunächst die Verbindung entlang eines Großkreises betrachtet. Ein Großkreis ist ein größtmöglicher Kreis auf der Kugeloberfläche. Dadurch teilt er die Kugel in zwei gleich große Hälften und der Mittelpunkt stimmt mit dem Mittelpunkt der Kugel überein. Ein Beispiel dafür sind Längenkreise auf der Erde, währenddessen Breitenkreise (bis auf den Äquator) keine Großkreise sind. Großkreise sind in der sphärischen Geometrie das äquivalent von Geraden in der Ebene und damit die kürzeste Verbindung zwischen zwei Punkten.
-Da die Fahrgeschwindigkeiten des NRTs unterschiedlich in Elevation und Azimut sind, ist der kürzeste Weg jedoch nicht immer der schnellste. Außerdem muss sich das Teleskop in der Elevation nur von 16° bis 90° (bzw. 164° mit Berücksichtigung des Flip-Overs) bewegen, da es sich nur in der oberen Kugelhälfte bewegen kann und durch den Boden limitiert ist.
-
+Zur Berechnung der kürzesten Strecke zwischen Start- und Zielpunkt wird zunächst die Verbindung entlang eines Großkreises betrachtet. Ein Großkreis ist ein größtmöglicher Kreis auf der Kugeloberfläche. Dadurch teilt er die Kugel in zwei gleich große Hälften und der Mittelpunkt stimmt mit dem Mittelpunkt der Kugel überein. Ein Beispiel dafür sind Längenkreise auf der Erde, währenddessen Breitenkreise (bis auf den Äquator) keine Großkreise sind. Großkreise sind in der sphärischen Geometrie das Äquivalent von Geraden in der Ebene und damit die kürzeste Verbindung zwischen zwei Punkten.
+Da die Fahrgeschwindigkeiten des NRTs in Elevation und Azimut unterschiedlich sind, ist der kürzeste Weg jedoch nicht immer der schnellste. Außerdem muss sich das Teleskop in der Elevation nur von 16° bis 90° (bzw. 164° mit Berücksichtigung des Flip-Overs) bewegen, da es sich nur in der oberen Kugelhälfte bewegen kann und mechanisch durch den Sockel nach unten begrenzt ist.
+\\
 Die Länge des Großkreisbogens lässt sich durch die zentrale Winkelentfernung delta_sigma berechnen:
 
 \begin{equation}
@@ -70,20 +70,34 @@ Die Länge des Großkreisbogens lässt sich durch die zentrale Winkelentfernung 
     \label{Großkreisbogenlängenformel}
 \end{equation}
 
-Da jedoch die reine Länge des Kreisbogens für die Bewegung weniger relevant ist, dient diese nur als Schätzung für die erwartete Laufzeit. Für das Fahren des Teleskops werden Punkte entlang dieses Pfads interpoliert.
-
+Diese Strecke entspricht nicht zwingend der kürzesten Zeit, da hier die Antriebsgrenzen und -geschwindigkeiten nicht berücksichtigt werden.
+Da jedoch die reine Länge des Kreisbogens für die Bewegung nicht entscheidend ist, dient diese nur als Schätzung für die erwartete Laufzeit. Für das Fahren des Teleskops werden Punkte entlang dieses Pfads interpoliert.
+\\
 Während eine Möglichkeit die oben beschriebene Bewegung entlang eines Großkreises ist, ist die gleichzeitige Bewegung von Azimut- und Elevationsposition auch möglich. Ein Vorteil hierbei ist, dass weniger berechnet werden muss. Das Teleskop bewegt sich schlicht von Start- zu Zielazimut und selbiges gilt für die Elevationskoordinate. Diese Bewegung kann aufgrund der beiden separaten Motoren im Teleskop simultan stattfinden.
 
 \subsubsection{SLERP-Interpolation \textendash~Vorteile und Grenzen}
 
-optisch kürzester weg ? nicht immer der geometrisch kürzeste
-slerp beschreibung
-interpolation auf einheitskugel
-warum sinnvoll (smooth + realistisch)
+\textbf{SLERP} (Spherical Linear Interpolation) ist eine Methode zur gleichmäßigen Interpolation auf einer Kugel(-Oberfläche) entlang eines Großkreises. Dabei entstehen gleichmäßig verteilte Zwischenpunkte zwischen Start- und Zielposition.
+Diese Methode eignet sich hier besonders gut, da sich das Teleskop flüssig und ohne abrupte Richtungswechsel bewegen soll.
+\\
+Für die Interpolation werden zunächst Start- und Zielkoordinaten vom AZEL-System in kartesische 3D-Vektoren transformiert.
 
+\begin{equation}
+    p(t) = \frac{sin((1~ - ~t) \cdot \omega)}{sin(\omega)} \cdot p_0 + \frac{sin(t \cdot \omega)}{sin(\omega)} \cdot p_1
+    \label{Interpolationspunkte}
+\end{equation}
 
-
-
+\begin{itemize}
+    \item p_0, p_1: Start- und Zielpunkt als Einheitsvektoren
+    \item \omega = arccos(p_0 \cdot p_1): Winkel zwischen den Vektoren
+    \item sin(\omega): Normierungsfaktor für Gewichtung
+    \item p(t): interpolierter Punkt entlang Großkreisbogen
+\end{itemize}
+\\
+Die interpolierten Vektoren werden anschließend zurück in Azimut- und Elevationskoordinaten konvertiert. Dadurch entsteht eine realistische Bewegung, die besonders bei großen Winkelunterschieden deutlich kürzer und glatter verläuft als eine Kombination aus separaten Achsenbewegungen.
+\\
+Ein Vorteil der SLERP-Methode ist die konstante Winkelgeschwindigkeit entlang der Kugeloberfläche, da dies sehr ähnlich zur natürlichen Teleskopbewegung ist.
+In der vorliegenden Implementierung wird SLERP in diskrete (standardmäßig 500) Schritte aufgeteilt, deren Koordinaten an das Steuerungssystem zur Bewegungsausführung übergeben werden. Die tatsächliche Laufzeit ergibt sich durch sukzessive Zeitabschätzung zwischen den Interpolationspunkten.
 
 
 \subsection{Laufzeitberechnung}
