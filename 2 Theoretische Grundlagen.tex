@@ -103,11 +103,15 @@ In der vorliegenden Implementierung wird SLERP in diskrete (standardmäßig 500)
 \subsection{Laufzeitberechnung}
 
 \subsubsection{Einfluss von Azimut- und Elevationsgeschwindigkeit}
+
+Die benötigte Zeit für das Bewegen des Teleskops wird maßgeblich durch die Antriebsgeschwindigkeiten in Azimut und Elevation bestimmt. Für das NRT wurden die Werte \SI{1.6}{^\circ\per\second} für Azimut und \SI{1.3}{^\circ\per\second} für Elevation ermittelt. Dies geschah mittels Teleskopbewegung über große Winkelveränderungen.
+\\
+Bei simultaner Bewegung ist nicht die Gesamtpfadlänge entscheidend, sondern die längere Einzelbewegung einer der beiden Achsen, da die Motoren unabhängig, aber paralell arbeiten.
+
 \subsubsection{Engstellen \textendash Limitierender Freiheitsgrad}
 
-azel geschwindigkeiten
-t max
-langer achsenweg dominiert
+In vielen Szenarien dominiert die langsamere Achse die Gesamtbewegungszeit. Bewegung in der Elevationsachse ist zwar langsamer, jedoch sind die Abstände hier meist geringer als beim Azimut.
+Grundsätzlich gilt - bei geringen Azimutunterschieden, aber hohem Höhenunterschied dominiert die Elevationsachse die Laufzeit, umgekehrt die Azimutachse.
 
 \subsection{Mechanische Freiheitsgrade des NRT}
 
