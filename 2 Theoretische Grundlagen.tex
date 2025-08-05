@@ -1,0 +1,126 @@
+\subsection{Koordinatensysteme in der Astronomie}
+
+In der Astronomie gibt es verschiedene Koordinatensysteme zur Beschreibung von Positionen am Himmel. Jedes hat seine Vor- und Nachteile, generell weit verbreitet sind das äquatoriale und das horizontale Koordinatensystem.
+Das äquatoriale Koordinatensystem benutzt Rektaszension und Deklination um Positionen zu bestimmen und ist an der Erdachse orientiert und somit global gültig. Ein Vorteil ist, dass nur in der Achse der Rektaszension mitgeführt werden muss.
+Im Gegensatz dazu ist das horizontale System standortabhängig und beschreibt Positionen relativ zum lokalen Horizont, was sehr intuitiv ist. Die Steuerung des NRTs erfolgt mechanisch über die beiden Achsen des horizontalen Systems - Azimut (AZ) und Elevation (El) - in der Software für den Client ist jedoch auch eine Umrechnung in das äquatoriale und auch das galaktische Koordinatensystem ersichtlich. 
+Ein Nachteil ergibt sich durch die Verwendung des AZEL-Systems bei Beobachtungen nahe des Zenits, wo kleine Positionsänderungen zu langen Bewegungen in AZ führen.
+
+\subsection{Mathematische Darstellung der Teleskopposition}
+
+Um die Distanzen / Pfade zwischen Start- und Zielkoordinaten zu berechnen, werden die Punkte hierfür auf der Oberfläche der Einheitssphäre dargestellt. Dies dient zur späteren Verwendung für die Interpolation von Strecken auf der Kugeloberfläche.
+Die Umrechnung von horizontalen zu kartesischen Koordinaten erfolgt durch die Verwendung trigonometrischer Funktionen (Kugelkoordinaten). Alle Umrechnungen erfolgen in Radianten / Bogenmaß, d.h. die AZ/EL-Koordinaten werden zunächst von Grad in Radiant konvertiert und dann für folgende Formeln verwendet.
+
+\begin{equation}
+    x = cos(EL) \cdot cos(AZ)
+    \label{cartesian_x}
+\end{equation}
+
+\begin{equation}
+    y = cos(EL) \cdot sin(AZ)
+    \label{cartesian_y}
+\end{equation}
+
+\begin{equation}
+    z = sin(EL)
+    \label{cartesian_z}
+\end{equation}
+\\
+Um die berechneten Zwischenpunkte für die Steuerung nutzbar zu machen, werden die kartesischen Koordinaten wieder in AZ/EL-Koordinaten mit folgenden Formeln rücktransformiert.
+
+\begin{equation}
+    hyp = \sqrt{x^2 + y^2}
+    \label{hypotenuse}
+\end{equation}
+
+\begin{equation}
+    AZ = arctan2(y,~x)~ \bmod ~360
+    \label{arctan2_az}
+\end{equation}
+
+\begin{equation}
+    EL = arctan2(z,~hyp)
+    \label{arctan2_el}
+\end{equation}
+\\
+Die Koordinaten sind grundsätzlich in Grad angegeben, die aufgezählten Formeln benötigen jedoch Radiant als Einheit der Winkel.
+Für die Konvertierung von Grad (°) in Radiant (rad) wird folgende Umrechnung benutzt.
+
+\begin{equation}
+    radians = degrees ~\cdot~ \frac{\pi}{180}
+    \label{degree to radians}
+\end{equation}
+
+
+\subsection{Sphärische Geometrie}
+
+\subsubsection{Großkreis- vs. Azimutalpfad}
+
+Zur Berechnung der kürzesten Strecke zwischen Start- und Zielpunkt wird zunächst die Verbindung entlang eines Großkreises betrachtet. Ein Großkreis ist ein größtmöglicher Kreis auf der Kugeloberfläche. Dadurch teilt er die Kugel in zwei gleich große Hälften und der Mittelpunkt stimmt mit dem Mittelpunkt der Kugel überein. Ein Beispiel dafür sind Längenkreise auf der Erde, währenddessen Breitenkreise (bis auf den Äquator) keine Großkreise sind. Großkreise sind in der sphärischen Geometrie das Äquivalent von Geraden in der Ebene und damit die kürzeste Verbindung zwischen zwei Punkten.
+Da die Fahrgeschwindigkeiten des NRTs in Elevation und Azimut unterschiedlich sind, ist der kürzeste Weg jedoch nicht immer der schnellste. Außerdem muss sich das Teleskop in der Elevation nur von 16° bis 90° (bzw. 164° mit Berücksichtigung des Flip-Overs) bewegen, da es sich nur in der oberen Kugelhälfte bewegen kann und mechanisch durch den Sockel nach unten begrenzt ist.
+\\
+Die Länge des Großkreisbogens lässt sich durch die zentrale Winkelentfernung delta_sigma berechnen:
+
+\begin{equation}
+    cos(\delta \sigma) = sin(EL_S) \cdot sin(EL_Z) + cos(EL_S) \cdot cos(EL_Z) \cdot cos(AZ_S - AZ_Z)
+    \label{Winkelentfernung}
+\end{equation}
+
+\begin{equation}
+    d = R \cdot \delta \sigma = arccos(cos(\delta \sigma))
+    \label{Großkreisbogenlängenformel}
+\end{equation}
+
+Diese Strecke entspricht nicht zwingend der kürzesten Zeit, da hier die Antriebsgrenzen und -geschwindigkeiten nicht berücksichtigt werden.
+Da jedoch die reine Länge des Kreisbogens für die Bewegung nicht entscheidend ist, dient diese nur als Schätzung für die erwartete Laufzeit. Für das Fahren des Teleskops werden Punkte entlang dieses Pfads interpoliert.
+\\
+Während eine Möglichkeit die oben beschriebene Bewegung entlang eines Großkreises ist, ist die gleichzeitige Bewegung von Azimut- und Elevationsposition auch möglich. Ein Vorteil hierbei ist, dass weniger berechnet werden muss. Das Teleskop bewegt sich schlicht von Start- zu Zielazimut und selbiges gilt für die Elevationskoordinate. Diese Bewegung kann aufgrund der beiden separaten Motoren im Teleskop simultan stattfinden.
+
+\subsubsection{SLERP-Interpolation \textendash~Vorteile und Grenzen}
+
+\textbf{SLERP} (Spherical Linear Interpolation) ist eine Methode zur gleichmäßigen Interpolation auf einer Kugel(-Oberfläche) entlang eines Großkreises. Dabei entstehen gleichmäßig verteilte Zwischenpunkte zwischen Start- und Zielposition.
+Diese Methode eignet sich hier besonders gut, da sich das Teleskop flüssig und ohne abrupte Richtungswechsel bewegen soll.
+\\
+Für die Interpolation werden zunächst Start- und Zielkoordinaten vom AZEL-System in kartesische 3D-Vektoren transformiert.
+
+\begin{equation}
+    p(t) = \frac{sin((1~ - ~t) \cdot \omega)}{sin(\omega)} \cdot p_0 + \frac{sin(t \cdot \omega)}{sin(\omega)} \cdot p_1
+    \label{Interpolationspunkte}
+\end{equation}
+
+\begin{itemize}
+    \item p_0, p_1: Start- und Zielpunkt als Einheitsvektoren
+    \item \omega = arccos(p_0 \cdot p_1): Winkel zwischen den Vektoren
+    \item sin(\omega): Normierungsfaktor für Gewichtung
+    \item p(t): interpolierter Punkt entlang Großkreisbogen
+\end{itemize}
+\\
+Die interpolierten Vektoren werden anschließend zurück in Azimut- und Elevationskoordinaten konvertiert. Dadurch entsteht eine realistische Bewegung, die besonders bei großen Winkelunterschieden deutlich kürzer und glatter verläuft als eine Kombination aus separaten Achsenbewegungen.
+\\
+Ein Vorteil der SLERP-Methode ist die konstante Winkelgeschwindigkeit entlang der Kugeloberfläche, da dies sehr ähnlich zur natürlichen Teleskopbewegung ist.
+In der vorliegenden Implementierung wird SLERP in diskrete (standardmäßig 500) Schritte aufgeteilt, deren Koordinaten an das Steuerungssystem zur Bewegungsausführung übergeben werden. Die tatsächliche Laufzeit ergibt sich durch sukzessive Zeitabschätzung zwischen den Interpolationspunkten.
+
+
+\subsection{Laufzeitberechnung}
+
+\subsubsection{Einfluss von Azimut- und Elevationsgeschwindigkeit}
+
+Die benötigte Zeit für das Bewegen des Teleskops wird maßgeblich durch die Antriebsgeschwindigkeiten in Azimut und Elevation bestimmt. Für das NRT wurden die Werte \SI{1.6}{^\circ\per\second} für Azimut und \SI{1.3}{^\circ\per\second} für Elevation ermittelt. Dies geschah mittels Teleskopbewegung über große Winkelveränderungen.
+\\
+Bei simultaner Bewegung ist nicht die Gesamtpfadlänge entscheidend, sondern die längere Einzelbewegung einer der beiden Achsen, da die Motoren unabhängig, aber paralell arbeiten.
+
+\subsubsection{Engstellen \textendash Limitierender Freiheitsgrad}
+
+In vielen Szenarien dominiert die langsamere Achse die Gesamtbewegungszeit. Bewegung in der Elevationsachse ist zwar langsamer, jedoch sind die Abstände hier meist geringer als beim Azimut.
+Grundsätzlich gilt - bei geringen Azimutunterschieden, aber hohem Höhenunterschied dominiert die Elevationsachse die Laufzeit, umgekehrt die Azimutachse.
+
+\subsection{Mechanische Freiheitsgrade des NRT}
+
+\subsubsection{Restriktionen durch Softwaregrenzen}
+
+Die Bewegung des Teleskops ist aktuell auf 0-360° Azimut und 16-90° Elevation softwaretechnisch beschränkt.
+In den meisten Fällen ist dies ausreichend, besonders bei Bewegungen über 180° im Azimut ist eine Unterrotation jedoch von Vorteil. Findet die Bewegung zusätzlich noch nahe dem Zenit, so ist ein Flip-Over eine Option, das Teleskop zeiteffizienter zu fahren.
+
+\subsubsection{Nutzung des vollen Bewegungsbereichs \textendash~Chancen \& Risiken}
+
+Beispielsweise ist ein Azimut-Schwenk von 350° auf 10° eine absolute Strecke von 340°, kann sich das Teleskop jedoch bis 540° (+180°) überdrehen, so wäre der kürzeste Weg nur 20° lang.
+Eine ähnliche Situation ergibt sich bei einer 180° Azimut-Bewegung bei zusätzlich einer Elevation von über 60-70°. Dann eignet sich ein Flip-Over, da bei Beispielsweise 70° eine Halbkreisrotation vermieden werden kann und sich eine Strecke von 40° ergibt.
