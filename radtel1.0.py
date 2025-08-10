@@ -174,7 +174,7 @@ def time_simult(az_abs_diff: float, el_abs_diff: float) -> float:
 
 
 # Constructs straight path for plotting
-def straight_path(start: Tuple[float, float], az_diff: float, el_diff: float, steps: int = 500) -> Tuple[float, float]:
+def straight_path(start: Tuple[float, float], az_diff: float, el_diff: float, steps: int = 500) -> List[Tuple[float, float]]:
     az1, el1 = start
     t = np.linspace(0.0, 1.0, steps)
     az = az1 + az_diff * t
@@ -287,6 +287,8 @@ def choose_path_logic(start: Tuple[float, float],
         return normal_path(start, end, steps)
 
 
+
+
 def simult_azel_path_smart(start: Tuple[float, float],
                          end: Tuple[float, float],
                          steps: int = 500,
@@ -318,11 +320,11 @@ def compare_method(wps: List[Tuple[float, float]], steps: int = 500) -> pd.DataF
 
         path_upgraded = simult_azel_path_smart(start, end, steps=steps)
         time_upgraded = slerp_path_time(path_upgraded)
-        rows.append({"From": start, "To": end, "Method": "AZ+EL Upgraded", "Time (s)": time_basic})
+        rows.append({"From": start, "To": end, "Method": "AZ+EL Upgraded", "Time (s)": time_upgraded})
     df = pd.DataFrame(rows)
     # Rounding
-    df["From"] = df["From"].apply(lambda t: (round(t[0], 1), round[t[1], 1]))
-    df["To"] = df["To"].apply(lambda t: (round(t[0], 1), round[t[1], 1]))
+    df["From"] = df["From"].apply(lambda t: (round(t[0], 1), round(t[1], 1)))
+    df["To"] = df["To"].apply(lambda t: (round(t[0], 1), round(t[1], 1)))
 
     return df
 
@@ -356,10 +358,10 @@ print("\nAverage time by method:")
 print(avg_times)
 
 # Save CSV
-det_csv = "/mnt/data/deterministic_compare.csv"
-rand_csv = "/mnt/data/random_compare.csv"
-df_predet.to_csv(det_csv, index=False)
-df_rand.to_csv(rand_csv, index=False)
+# det_csv = "/mnt/data/deterministic_compare.csv"
+# rand_csv = "/mnt/data/random_compare.csv"
+# df_predet.to_csv(det_csv, index=False)
+# df_rand.to_csv(rand_csv, index=False)
 
 
 
@@ -376,3 +378,18 @@ plt.ylabel("Time (s)")
 plt.grid(True)
 plt.legend()
 plt.show()
+
+
+
+
+plt.figure(figsize=(8, 6))
+data = [df_rand[df_rand["Method"] == method]["Time (s)"].to_numpy() for method in df_rand["Method"].unique()]
+plt.boxplot(data, labels=list(df_rand["Method"].unique()), vert=True, patch_artist=False)
+plt.title(f"Random {N} Waypoints: Time Distribution by Methods")
+plt.ylabel("Time (s)")
+plt.grid(True)
+plt.show()
+
+
+
+
