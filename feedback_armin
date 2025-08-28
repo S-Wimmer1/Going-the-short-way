@@ -1,0 +1,52 @@
+'''
+die Ausgabekoordinaten sollten sinnvollerweise immer Bezugs des Antriebskoordinatensystems sein. Man kann aber auch wieder ins Horizontsystem rückrechnen, das passiert ja effektiv zwischen dem Server-Plugin der Antriebssteuerung und dem Client genau so.
+
+Benchmarken muss man dass in dem Sinn ja auch nicht zwangsläufig. Es ergibt sich ja schon aus dem Hamilton'schen Prinzip rein argumentativ, dass der kürzeste Weg der zeitlich günstigste sein muss, solang die Elevationsachse mindestens die halbe Winkelgeschwindigkeit der Azimutachse hat.
+
+Die Überrotation ist die Strategie, die man möglichst vermeiden sollte. In der Antriebssteuerung gibt es diese Option, die autonom eine Überrotation ausführt, wenn die Azimutdistanz für die kommandierten Zielkoordinaten kürzer ist als der "nominale" Azimutbereich von 0-360.
+
+Man kann daher davon ausgehen, dass sich das Teleskop immer in diesem Bereich bewegen soll, weil das die bevorzugte Konfiguration ist. Daher ist die Selektion der flip-over-Option die einzig gesuchte Bedingung.
+
+Den gefragten Algorithmus hab ich ja schon als Kommentar angegeben, unten nochmal der Vollständigkeit halber. Die Zielkoordinatenpaare im Antriebssystem waren jeweils dort angegeben wo "goto" im listing stand. Ich hab es nochmal abgeändert, die _g sind jetzt die Ausgabekoordinaten für die Steuerung.
+
+Als Funktion in python-Syntax würde man das folgendermaßen darstellen:
+'''
+
+az_g, el_g = determine_drive_coordinates(az_t, el_t)
+
+command_drive(az_g, el_g)
+
+'''Die _t kommen als Kommando vom Client an den Server, die _g gehen an die Steuerung. Die Rückmeldung des aktuellen Teleskop-Pointings an den Client bleibt unverändert, diese Koordinaten werden wie bisher aus den Koordinaten des Antriebs (_d) bestimmt.
+'''
+
+
+
+#LIM ... upper EL drive limit
+
+#_d ... current drive coordinates
+#_t ... target coordinates
+#_r ... reverse-path coordinates
+#_g ... drive command coordinates
+
+
+az_r = az_t - 180
+el_r = 180 - el_t
+
+if el_r > LIM then
+    az_g = az
+    el_g = el
+else
+
+    delta   = | |az_d - az|   - |el_d - el|   |
+    delta_r = | |az_d - az_r| - |el_d - el_r| |
+
+    if delta_r <= delta then
+        az_g = az_r
+        el_g = el_r
+    else
+        az_g = az
+        el_g = el
+    endif
+endif
+
+goto az_g, el_g
