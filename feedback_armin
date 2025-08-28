@@ -50,3 +50,38 @@ else
 endif
 
 goto az_g, el_g
+
+
+
+
+
+##########
+Der Vollständigkeit halber hier die Lösung der Projektaufgabe. Eine Berechnung der Großkreisdistanz zwischen den Punkten ist dafür gar nicht nötig, da die beiden Rotationsachsen eine fixe, rechtwinkelige Beziehung zueinander haben. Damit reduziert sich die Problemstellung auf eine simple, eindimensionale links-rechts Entscheidung. Der Check für das EL Limit ist eigentlich nur dann nötig, wenn die mechanische EL-Achse nicht symmetrisch eingestellt ist (was bei uns der Fall ist).
+
+Ich hab das vorhin implementiert und getestet, es macht genau was es soll. Ein weiterer Check zur Überdrehung in AZ ist ebenfalls gar nicht nötig, weil der flip-over tendenziell immer dazu führt, dass die Antriebskoordinaten immer bevorzugt im 0-360 Bereich landen. Da EL immer schneller dreht als AZ ist auch die Gewichtung implizit unnötig, weil EL bei der Auswahl durch die maximal halbe Bogenlänge bevorzugt wird.
+
+
+
+LIM ... upper EL drive limit
+
+_d ... current drive coordinates
+_t ... target coordinates
+_r ... reverse-path coordinates
+
+
+az_r = az_t - 180
+el_r = 180 - el_t
+
+if el_r > LIM then
+goto az, el
+else
+
+delta = | |az_d - az| - |el_d - el| |
+delta_r = | |az_d - az_r| - |el_d - el_r| |
+
+if delta_r <= delta then
+goto az_r, el_r
+else
+goto az, el
+endif
+endif
