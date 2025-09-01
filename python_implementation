@@ -1,3 +1,5 @@
+from math import fabs
+
 #LIM ... upper EL drive limit
 LIM = 90.0 # constant
 
@@ -7,7 +9,7 @@ def python_path(az_d, el_d, az_t, el_t):
   #_r ... reverse-path coordinates -> calculate this
   #_g ... drive command coordinates -> return this
   
-  # reverse path adjustment/calculation
+  # flip_over/reverse path adjustment/calculation
   az_r = az_t - 180.0
   el_r = 180.0 - el_t
   
@@ -30,4 +32,4 @@ def python_path(az_d, el_d, az_t, el_t):
 
 az_g, el_g = python_path(az_d, el_d, az_t, el_t)
 
-command_drive(az_g, el_g) # <- Schnittstelle Client
+command_drive(az_g, el_g) # <- Schnittstelle Client beispiel
