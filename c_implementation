@@ -1,0 +1,35 @@
+#include <math.h>
+
+void determine_drive_coordinates(double az_d, double el_d,
+                                 double az_t, double el_t,
+                                 double *az_g, double *el_g) {
+  const double LIM = 90.0;
+  // calculates flip_over coordinates
+  double az_r = az_t - 180.0;
+  double el_r = 180.0 - el_t;
+
+  // checks which path is eligbile
+  if (el_r > LIM) {
+    *az_g = az_t;
+    *el_G = el_t;
+    return;
+  }
+
+  // current - target
+  double delta   = fabs(fabs(az_d - az_t) - fabs(el_d - el_t));
+  // current - reverse
+  double delta_r = fabs(fabs(az_d - az_r) - fabs(el_d - el_r));
+
+  if (delta_r <= LIM) {
+    *az_g = az_r;
+    *el_g = el_r;
+  } else {
+    *az_g = az_t;
+    *el_g = el_t;
+  }
+}
+
+double az_g, el_g;
+determine_drive_coordinates(az_d, el_d, az_t, el_t, &az_g, &el_g);
+// client goto command example
+command_drive(az_g, el_g);
